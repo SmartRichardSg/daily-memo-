@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f5">
+<title>Daily Memo</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1d1d1f;background:#f7f7f5}
+body{margin:0}
+main{max-width:620px;margin:0 auto;padding:20px 16px 40px}
+.card{background:#fff;border:1px solid #e4e4e0;border-radius:18px;padding:20px;box-shadow:0 2px 10px #00000008}
+h1{font-size:28px;margin:0 0 4px}
+.date{color:#6b6b6b;margin-bottom:20px}
+.score{font-size:21px;font-weight:700;margin:0 0 14px}
+.task{display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;padding:10px 0}
+.task input{width:23px;height:23px}
+.task span{flex:1;font-size:17px}
+.done{text-decoration:line-through;color:#999}
+.small{font-size:14px;color:#777}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+button{border:1px solid #d6d6d0;background:#fff;border-radius:10px;padding:10px 13px;font-size:15px}
+button.primary{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+input[type=text],textarea{box-sizing:border-box;width:100%;border:1px solid #d6d6d0;border-radius:10px;padding:12px;font-size:16px}
+.add{display:flex;gap:8px;margin-top:14px}
+.add input{flex:1}
+textarea{min-height:100px;resize:vertical}
+section{margin-top:22px}
+.history{display:grid;gap:8px}
+.day{display:flex;justify-content:space-between;gap:12px;border:1px solid #e7e7e2;border-radius:10px;padding:10px 12px}
+@media(max-width:380px){main{padding:14px 10px}.card{padding:16px}}
+</style>
+</head>
+<body>
+<main>
+<div class="card">
+<h1>Daily Memo</h1>
+<div id="date" class="date"></div>
+<div id="score" class="score">0/0 Done</div>
+<div id="tasks"></div>
+
+<form id="addForm" class="add">
+<input id="newTask" type="text" placeholder="Add a task…" autocomplete="off">
+<button class="primary" type="submit">Add</button>
+</form>
+
+<section>
+<label class="small" for="comments">Comments / Notes</label>
+<textarea id="comments" placeholder="On holiday, sick, rest day…"></textarea>
+</section>
+
+<div class="actions">
+<button id="prev">← Previous</button>
+<button id="next">Next Day →</button>
+</div>
+
+<section>
+<div class="small" style="margin-bottom:8px">Past Days</div>
+<div id="history" class="history"></div>
+</section>
+</div>
+</main>
+
+<script>
+(function(){
+const KEY="dailyMemo_v1";
+const initialTasks=["Exercise","Read 20 pages","Japanese practice"];
+let state=JSON.parse(localStorage.getItem(KEY)||"null")||{days:{}};
+let current=new Date(); current.setHours(12,0,0,0);
+
+function key(d){return d.toISOString().slice(0,10)}
+function fmt(d){return d.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+function shift(d,n){const x=new Date(d);x.setDate(x.getDate()+n);x.setHours(12,0,0,0);return x}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function ensure(d){
+ const k=key(d);
+ if(!state.days[k]){
+   const p=state.days[key(shift(d,-1))];
+   state.days[k]={tasks:(p?p.tasks:initialTasks).map(t=>({text:typeof t==="string"?t:t.text,done:false})),comments:""};
+   save();
+ }
+ return state.days[k];
+}
+function render(){
+ const day=ensure(current);
+ document.getElementById("date").textContent=fmt(current);
+ const done=day.tasks.filter(t=>t.done).length;
+ document.getElementById("score").textContent=done+"/"+day.tasks.length+" Done";
+ const box=document.getElementById("tasks"); box.innerHTML="";
+ day.tasks.forEach((t,i)=>{
+   const row=document.createElement("div");row.className="task";
+   const cb=document.createElement("input");cb.type="checkbox";cb.checked=t.done;
+   cb.addEventListener("change",()=>{t.done=cb.checked;save();render()});
+   const span=document.createElement("span");span.textContent=t.text;if(t.done)span.className="done";
+   const edit=document.createElement("button");edit.textContent="Edit";edit.type="button";
+   edit.addEventListener("click",()=>{const v=prompt("Edit task:",t.text);if(v&&v.trim()){t.text=v.trim();save();render()}});
+   const del=document.createElement("button");del.textContent="Delete";del.type="button";
+   del.addEventListener("click",()=>{day.tasks.splice(i,1);save();render()});
+   row.append(cb,span,edit,del);box.append(row);
+ });
+ const comments=document.getElementById("comments");
+ comments.value=day.comments||"";
+ comments.oninput=()=>{day.comments=comments.value;save()};
+ renderHistory();
+}
+function renderHistory(){
+ const h=document.getElementById("history");h.innerHTML="";
+ Object.keys(state.days).sort().reverse().forEach(k=>{
+   const d=state.days[k], done=d.tasks.filter(t=>t.done).length;
+   const row=document.createElement("button");row.type="button";row.className="day";
+   const left=document.createElement("span");left.textContent=new Date(k+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+   const right=document.createElement("strong");right.textContent=done+"/"+d.tasks.length;
+   row.append(left,right);row.addEventListener("click",()=>{current=new Date(k+"T12:00:00");render()});
+   h.append(row);
+ });
+}
+document.getElementById("addForm").addEventListener("submit",e=>{
+ e.preventDefault();const input=document.getElementById("newTask"),v=input.value.trim();if(!v)return;
+ ensure(current).tasks.push({text:v,done:false});input.value="";save();render();input.focus();
+});
+document.getElementById("prev").onclick=()=>{current=shift(current,-1);render()};
+document.getElementById("next").onclick=()=>{current=shift(current,1);render()};
+render();
+})();
+</script>
+</body>
+</html>
