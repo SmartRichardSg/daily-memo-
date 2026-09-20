@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<title>Read • Recall • Apply</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f3f6fa; color: #25344a;
+  }
+  .app { max-width: 760px; margin: auto; padding: 18px 14px 40px; }
+  header { text-align:center; padding: 12px 0 18px; }
+  h1 { margin:0; color:#183b68; font-size:28px; }
+  .tagline { margin:6px 0 0; color:#607086; font-size:14px; }
+  .card {
+    background:white; border-radius:16px; margin:12px 0; padding:16px;
+    box-shadow:0 3px 14px rgba(20,40,70,.08);
+  }
+  .blue { border-top:8px solid #2f73d9; }
+  .green { border-top:8px solid #13a589; }
+  .orange { border-top:8px solid #f5a10b; }
+  .purple { border-top:8px solid #8d45ad; }
+  .red { border-top:8px solid #df5b16; }
+  label { display:block; font-weight:700; margin:12px 0 6px; font-size:14px; }
+  input, textarea {
+    width:100%; border:1px solid #d4dce7; border-radius:10px; padding:11px;
+    font:inherit; background:#fbfcfe;
+  }
+  textarea { min-height:70px; resize:vertical; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .timer {
+    text-align:center; background:#eef5ff; border-radius:14px; padding:18px;
+    margin:8px 0 14px;
+  }
+  .timer .time { font-size:42px; font-weight:800; color:#1e5eb7; letter-spacing:1px; }
+  .status { margin:6px 0 14px; color:#53647a; }
+  button {
+    width:100%; border:0; border-radius:12px; padding:13px 16px;
+    font-size:16px; font-weight:700; cursor:pointer; margin-top:8px;
+  }
+  .primary { background:#2563eb; color:white; }
+  .secondary { background:#e9eef5; color:#30445d; }
+  .danger { background:#fff0eb; color:#b84d1b; }
+  .section-title { color:white; margin:-16px -16px 14px; padding:10px 14px; font-size:17px; }
+  .blue .section-title{background:#2f73d9}.green .section-title{background:#13a589}
+  .orange .section-title{background:#f5a10b}.purple .section-title{background:#8d45ad}
+  .red .section-title{background:#df5b16}
+  .hidden { display:none; }
+  .entry { border:1px solid #dde4ed; border-radius:12px; padding:12px; margin:10px 0; }
+  .entry strong { color:#183b68; }
+  .small { font-size:13px; color:#68778a; }
+  .review-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; text-align:center; }
+  .review-grid div { background:#fff7ed; padding:10px 4px; border:1px solid #f0d4b5; border-radius:8px; font-size:12px; }
+  @media(max-width:560px){ .grid{grid-template-columns:1fr}.review-grid{grid-template-columns:1fr 1fr 1fr} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>READ • RECALL • APPLY</h1>
+    <div class="tagline">Small Steps. Better Every Day.</div>
+  </header>
+
+  <div class="card blue">
+    <div class="section-title">1 · START A READING SESSION</div>
+    <div class="grid">
+      <div><label>Book / Article</label><input id="book" placeholder="e.g. Atomic Habits"></div>
+      <div><label>Chapter / Pages</label><input id="pages" placeholder="e.g. Chapter 3 / pp. 40–55"></div>
+    </div>
+    <div class="grid">
+      <div><label>Date</label><input id="date" type="date"></div>
+      <div><label>Start time</label><input id="startTime" type="time"></div>
+    </div>
+    <button class="primary" id="startBtn" onclick="startSession()">▶ Start 30-Minute Reading</button>
+    <button class="secondary hidden" id="stopBtn" onclick="finishSession()">Finish Reading & Recall Now</button>
+    <div id="timerBox" class="timer hidden">
+      <div class="small">READING TIME</div>
+      <div class="time" id="timer">30:00</div>
+      <div class="status" id="status">Read with focus. Your recall form will open when time is up.</div>
+    </div>
+  </div>
+
+  <div id="formArea" class="hidden">
+    <div class="card blue">
+      <div class="section-title">2 · BEFORE READING — SET YOUR PURPOSE</div>
+      <label>What do I want to learn?</label>
+      <textarea id="learn"></textarea>
+      <label>What do I already know?</label>
+      <textarea id="know"></textarea>
+    </div>
+
+    <div class="card green">
+      <div class="section-title">3 · DURING READING — ASK & CAPTURE</div>
+      <label>What is the main idea?</label><textarea id="mainIdea"></textarea>
+      <label>WHO? Who / what is involved?</label><textarea id="who"></textarea>
+      <label>WHAT? What is happening?</label><textarea id="what"></textarea>
+      <label>WHY? Why is it important?</label><textarea id="why"></textarea>
+      <label>HOW? How does it work / how can I use it?</label><textarea id="how"></textarea>
+      <label>What surprised or interested me?</label><textarea id="interesting"></textarea>
+    </div>
+
+    <div class="card orange">
+      <div class="section-title">4 · CLOSE THE BOOK — RECALL</div>
+      <label>3 things I remember</label><textarea id="remember"></textarea>
+      <label>My 1-sentence summary</label><textarea id="summary"></textarea>
+    </div>
+
+    <div class="card purple">
+      <div class="section-title">5 · TURN READING INTO ACTION</div>
+      <label>What will I DO with what I learned?</label>
+      <textarea id="action"></textarea>
+      <label>My action step</label><input id="actionStep">
+      <div class="grid">
+        <div><label>When will I do it?</label><input id="when"></div>
+        <div><label>How will I know I did it?</label><input id="success"></div>
+      </div>
+    </div>
+
+    <div class="card red">
+      <div class="section-title">6 · RETENTION — REVIEW WITHOUT LOOKING</div>
+      <div class="review-grid">
+        <div><b>Today</b><br>Read + recall</div>
+        <div><b>Tomorrow</b><br>2-min recall</div>
+        <div><b>3 Days</b><br>2-min recall</div>
+        <div><b>7 Days</b><br>2-min recall</div>
+        <div><b>30 Days</b><br>2-min recall</div>
+      </div>
+      <button class="primary" onclick="saveEntry()">✓ Save Reading Session</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px;color:#183b68;font-size:20px">My Reading History</h2>
+    <div class="small">Your entries are saved on this device/browser.</div>
+    <div id="history"></div>
+    <button class="danger" onclick="clearHistory()">Clear All History</button>
+  </div>
+</div>
+
+<script>
+let timerInterval = null, remaining = 1800, sessionStarted = false;
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function nowParts(){
+  const d = new Date();
+  return {date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+          time:`${pad(d.getHours())}:${pad(d.getMinutes())}`};
+}
+function setNow(){
+  const n=nowParts();
+  document.getElementById('date').value=n.date;
+  document.getElementById('startTime').value=n.time;
+}
+setNow();
+
+function startSession(){
+  const book=document.getElementById('book').value.trim();
+  if(!book){ alert('Please enter the book or article first.'); return; }
+  setNow();
+  sessionStarted=true; remaining=1800;
+  document.getElementById('startBtn').classList.add('hidden');
+  document.getElementById('stopBtn').classList.remove('hidden');
+  document.getElementById('timerBox').classList.remove('hidden');
+  document.getElementById('formArea').classList.add('hidden');
+  updateTimer();
+  timerInterval=setInterval(()=>{
+    remaining--; updateTimer();
+    if(remaining<=0){ clearInterval(timerInterval); openRecall(); }
+  },1000);
+}
+function updateTimer(){
+  const m=Math.floor(remaining/60), s=remaining%60;
+  document.getElementById('timer').textContent=`${pad(m)}:${pad(s)}`;
+}
+function finishSession(){
+  clearInterval(timerInterval);
+  openRecall();
+}
+function openRecall(){
+  document.getElementById('timerBox').classList.remove('hidden');
+  document.getElementById('stopBtn').classList.add('hidden');
+  document.getElementById('status').textContent='30 minutes completed. Now close the book and complete your recall.';
+  document.getElementById('formArea').classList.remove('hidden');
+  document.getElementById('formArea').scrollIntoView({behavior:'smooth'});
+}
+function val(id){return document.getElementById(id).value.trim();}
+function saveEntry(){
+  if(!val('book')){alert('Please enter the book or article.');return;}
+  const entry={
+    book:val('book'),pages:val('pages'),date:val('date'),startTime:val('startTime'),
+    learn:val('learn'),know:val('know'),mainIdea:val('mainIdea'),who:val('who'),what:val('what'),
+    why:val('why'),how:val('how'),interesting:val('interesting'),remember:val('remember'),
+    summary:val('summary'),action:val('action'),actionStep:val('actionStep'),
+    when:val('when'),success:val('success'),savedAt:new Date().toLocaleString()
+  };
+  const entries=JSON.parse(localStorage.getItem('rraEntries')||'[]');
+  entries.unshift(entry); localStorage.setItem('rraEntries',JSON.stringify(entries));
+  alert('Reading session saved.');
+  resetForm(); renderHistory();
+}
+function resetForm(){
+  ['book','pages','learn','know','mainIdea','who','what','why','how','interesting','remember','summary','action','actionStep','when','success'].forEach(id=>document.getElementById(id).value='');
+  setNow(); remaining=1800; sessionStarted=false;
+  document.getElementById('startBtn').classList.remove('hidden');
+  document.getElementById('stopBtn').classList.add('hidden');
+  document.getElementById('timerBox').classList.add('hidden');
+  document.getElementById('formArea').classList.add('hidden');
+}
+function renderHistory(){
+  const entries=JSON.parse(localStorage.getItem('rraEntries')||'[]');
+  const h=document.getElementById('history');
+  if(!entries.length){h.innerHTML='<p class="small">No reading sessions yet.</p>';return;}
+  h.innerHTML=entries.map((e,i)=>`
+    <div class="entry">
+      <strong>${escapeHtml(e.book)}</strong> <span class="small">${escapeHtml(e.date)} · ${escapeHtml(e.startTime)}</span>
+      <div class="small">${escapeHtml(e.pages||'')}</div>
+      <p><b>Main idea:</b> ${escapeHtml(e.mainIdea||'—')}</p>
+      <p><b>3 things I remember:</b> ${escapeHtml(e.remember||'—')}</p>
+      <p><b>Action:</b> ${escapeHtml(e.actionStep||e.action||'—')}</p>
+      <button class="secondary" onclick="deleteEntry(${i})">Delete</button>
+    </div>`).join('');
+}
+function deleteEntry(i){
+  const entries=JSON.parse(localStorage.getItem('rraEntries')||'[]');
+  entries.splice(i,1); localStorage.setItem('rraEntries',JSON.stringify(entries)); renderHistory();
+}
+function clearHistory(){
+  if(confirm('Delete all saved reading sessions from this device?')){
+    localStorage.removeItem('rraEntries'); renderHistory();
+  }
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+renderHistory();
+</script>
+</body>
+</html>
