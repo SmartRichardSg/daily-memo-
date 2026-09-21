@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f5">
+<link rel="apple-touch-icon" href="daily-memo-icon.png">
+<link rel="icon" type="image/png" href="daily-memo-icon.png">
+<title>Project Memo</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1d1d1f;background:#f7f7f5}
+body{margin:0}main{max-width:620px;margin:0 auto;padding:20px 16px 40px}
+.card{background:#fff;border:1px solid #e4e4e0;border-radius:18px;padding:20px;box-shadow:0 2px 10px #00000008}
+h1{font-size:28px;margin:0 0 4px}.sub{color:#6b6b6b;margin-bottom:20px}
+.project{border-bottom:1px solid #eee;padding:12px 0}.projectTop{display:flex;align-items:flex-start;gap:10px}
+.project input{width:23px;height:23px;flex:none}.projectTitle{flex:1;font-size:17px;font-weight:600}
+.done{text-decoration:line-through;color:#999}.notes{margin:7px 0 0 34px;color:#666;font-size:14px;white-space:pre-wrap}
+.actions{display:flex;gap:7px;margin:8px 0 0 34px}
+button{border:1px solid #d6d6d0;background:#fff;border-radius:10px;padding:9px 12px;font-size:14px}
+button.primary{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+form{margin-top:16px}input[type=text],textarea{box-sizing:border-box;width:100%;border:1px solid #d6d6d0;border-radius:10px;padding:12px;font-size:16px}
+textarea{min-height:80px;margin-top:8px;resize:vertical}.add{display:flex;gap:8px;margin-top:8px}.count{font-size:16px;font-weight:700;margin-bottom:8px}
+.empty{color:#777;text-align:center;padding:20px 0}.completed{margin-top:22px}.small{font-size:14px;color:#777}.back{margin-bottom:14px}
+@media(max-width:380px){main{padding:14px 10px}.card{padding:16px}}
+</style>
+</head>
+<body>
+<main><div class="card">
+<div class="back"><button onclick="history.back()">← Daily Memo</button></div>
+<h1>Project Memo</h1>
+<div class="sub">Keep new ideas here. Finish them or delete them when no longer needed.</div>
+<div id="count" class="count"></div><div id="projects"></div>
+<form id="addForm">
+<input id="title" type="text" placeholder="New project or idea…" autocomplete="off">
+<textarea id="notes" placeholder="Notes (optional)"></textarea>
+<div class="add"><button class="primary" type="submit">＋ Add Project</button></div>
+</form>
+<div id="completed" class="completed"></div>
+</div></main>
+<script>
+(function(){
+const KEY="projectMemo_v1";let projects=JSON.parse(localStorage.getItem(KEY)||"[]");
+function save(){localStorage.setItem(KEY,JSON.stringify(projects))}
+function render(){
+const active=projects.filter(p=>!p.done),finished=projects.filter(p=>p.done);
+document.getElementById("count").textContent=active.length+" Active Project"+(active.length===1?"":"s");
+const box=document.getElementById("projects");box.innerHTML="";
+if(!active.length)box.innerHTML='<div class="empty">No projects yet. Add a new idea above.</div>';
+active.forEach(p=>{
+const row=document.createElement("div");row.className="project";const top=document.createElement("div");top.className="projectTop";
+const cb=document.createElement("input");cb.type="checkbox";cb.onchange=()=>{p.done=true;save();render()};
+const title=document.createElement("span");title.className="projectTitle";title.textContent=p.title;top.append(cb,title);row.append(top);
+if(p.notes){const n=document.createElement("div");n.className="notes";n.textContent=p.notes;row.append(n)}
+const actions=document.createElement("div");actions.className="actions";
+const edit=document.createElement("button");edit.textContent="Edit";edit.onclick=()=>{const t=prompt("Edit project:",p.title);if(t&&t.trim()){p.title=t.trim();save();render()}};
+const del=document.createElement("button");del.textContent="Delete";del.onclick=()=>{if(confirm("Delete this project?")){projects=projects.filter(x=>x!==p);save();render()}};
+actions.append(edit,del);row.append(actions);box.append(row);
+});
+const c=document.getElementById("completed");c.innerHTML="";
+if(finished.length){c.innerHTML='<div class="small">Completed</div>';
+finished.forEach(p=>{const row=document.createElement("div");row.className="project";const top=document.createElement("div");top.className="projectTop";
+const cb=document.createElement("input");cb.type="checkbox";cb.checked=true;cb.onchange=()=>{p.done=false;save();render()};
+const title=document.createElement("span");title.className="projectTitle done";title.textContent=p.title;top.append(cb,title);row.append(top);
+const actions=document.createElement("div");actions.className="actions";const del=document.createElement("button");del.textContent="Delete";del.onclick=()=>{if(confirm("Delete this completed project?")){projects=projects.filter(x=>x!==p);save();render()}};actions.append(del);row.append(actions);c.append(row);
+});}}
+document.getElementById("addForm").onsubmit=e=>{e.preventDefault();const title=document.getElementById("title").value.trim(),notes=document.getElementById("notes").value.trim();if(!title)return;projects.unshift({title,notes,done:false});save();document.getElementById("title").value="";document.getElementById("notes").value="";render();document.getElementById("title").focus()};
+render();
+})();
+</script>
+</body>
+</html>
