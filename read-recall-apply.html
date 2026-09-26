@@ -9,14 +9,14 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #f3f6fa; color: #25344a;
+    background: #e4e9ee; color: #25344a;
   }
   .app { max-width: 760px; margin: auto; padding: 18px 14px 40px; }
   header { text-align:center; padding: 12px 0 18px; }
   h1 { margin:0; color:#183b68; font-size:28px; }
   .tagline { margin:6px 0 0; color:#607086; font-size:14px; }
   .card {
-    background:white; border-radius:16px; margin:12px 0; padding:16px;
+    background:#f7f8f9; border-radius:16px; margin:12px 0; padding:16px;
     box-shadow:0 3px 14px rgba(20,40,70,.08);
   }
   .blue { border-top:8px solid #2f73d9; }
@@ -27,7 +27,7 @@
   label { display:block; font-weight:700; margin:12px 0 6px; font-size:14px; }
   input, textarea {
     width:100%; border:1px solid #d4dce7; border-radius:10px; padding:11px;
-    font:inherit; background:#fbfcfe;
+    font:inherit; background:#f1f4f6;
   }
   textarea { min-height:70px; resize:vertical; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -55,6 +55,12 @@
   .review-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; text-align:center; }
   .review-grid div { background:#fff7ed; padding:10px 4px; border:1px solid #f0d4b5; border-radius:8px; font-size:12px; }
   @media(max-width:560px){ .grid{grid-template-columns:1fr}.review-grid{grid-template-columns:1fr 1fr 1fr} }
+  .word-card { background:#f7faff; border:1px solid #dbe7f5; border-radius:12px; padding:12px; margin:9px 0; }
+  .word { font-size:19px; font-weight:800; color:#2563eb; }
+  .meaning { margin-top:3px; font-weight:600; }
+  .example { margin-top:6px; color:#4d5e73; font-size:14px; line-height:1.4; }
+  .spelling { margin-top:5px; color:#68778a; font-size:13px; }
+
 </style>
 </head>
 <body>
@@ -132,6 +138,12 @@
     </div>
   </div>
 
+  <div class="card" id="vocabCard">
+    <h2 style="margin:0 0 6px;color:#183b68;font-size:20px">📚 3 Useful Words Today</h2>
+    <div class="small" style="margin-bottom:12px">Build your vocabulary and spelling — 3 words a day.</div>
+    <div id="vocabulary"></div>
+  </div>
+
   <div class="card">
     <h2 style="margin:0 0 8px;color:#183b68;font-size:20px">My Reading History</h2>
     <div class="small">Your entries are saved on this device/browser.</div>
@@ -141,7 +153,8 @@
 </div>
 
 <script>
-let timerInterval = null, remaining = 1800, sessionStarted = false;
+let timerInterval = null, remaining = 1800, sessionStarted = false, sessionStartMs = null;
+const SESSION_KEY = 'rraActiveSession';
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function nowParts(){
@@ -156,20 +169,42 @@ function setNow(){
 }
 setNow();
 
+function saveActiveSession(){
+  if(!sessionStarted) return;
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    startMs: sessionStartMs,
+    book: document.getElementById('book').value,
+    pages: document.getElementById('pages').value,
+    date: document.getElementById('date').value,
+    startTime: document.getElementById('startTime').value
+  }));
+}
+function clearActiveSession(){ localStorage.removeItem(SESSION_KEY); }
+function elapsedSeconds(){ return Math.floor((Date.now()-sessionStartMs)/1000); }
+function refreshTimer(){
+  if(!sessionStarted) return;
+  remaining = Math.max(0, 1800 - elapsedSeconds());
+  updateTimer();
+  if(remaining<=0){
+    clearInterval(timerInterval);
+    clearActiveSession();
+    openRecall();
+  }
+}
 function startSession(){
   const book=document.getElementById('book').value.trim();
   if(!book){ alert('Please enter the book or article first.'); return; }
   setNow();
-  sessionStarted=true; remaining=1800;
+  sessionStarted=true;
+  sessionStartMs=Date.now();
+  remaining=1800;
+  saveActiveSession();
   document.getElementById('startBtn').classList.add('hidden');
   document.getElementById('stopBtn').classList.remove('hidden');
   document.getElementById('timerBox').classList.remove('hidden');
   document.getElementById('formArea').classList.add('hidden');
-  updateTimer();
-  timerInterval=setInterval(()=>{
-    remaining--; updateTimer();
-    if(remaining<=0){ clearInterval(timerInterval); openRecall(); }
-  },1000);
+  refreshTimer();
+  timerInterval=setInterval(refreshTimer,1000);
 }
 function updateTimer(){
   const m=Math.floor(remaining/60), s=remaining%60;
@@ -177,15 +212,46 @@ function updateTimer(){
 }
 function finishSession(){
   clearInterval(timerInterval);
+  clearActiveSession();
   openRecall();
 }
 function openRecall(){
+  sessionStarted=false;
   document.getElementById('timerBox').classList.remove('hidden');
   document.getElementById('stopBtn').classList.add('hidden');
   document.getElementById('status').textContent='30 minutes completed. Now close the book and complete your recall.';
   document.getElementById('formArea').classList.remove('hidden');
   document.getElementById('formArea').scrollIntoView({behavior:'smooth'});
 }
+
+// If iPhone locks the screen or Safari is temporarily suspended, setInterval may pause.
+// The timer therefore uses the actual clock (Date.now) rather than counting timer ticks.
+// When the app becomes active again, it catches up to the correct elapsed time.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible') refreshTimer();
+});
+window.addEventListener('pageshow', ()=>refreshTimer());
+
+function restoreActiveSession(){
+  const saved=localStorage.getItem(SESSION_KEY);
+  if(!saved) return;
+  try{
+    const x=JSON.parse(saved);
+    if(!x.startMs) return;
+    sessionStartMs=x.startMs;
+    sessionStarted=true;
+    document.getElementById('book').value=x.book||'';
+    document.getElementById('pages').value=x.pages||'';
+    document.getElementById('date').value=x.date||'';
+    document.getElementById('startTime').value=x.startTime||'';
+    document.getElementById('startBtn').classList.add('hidden');
+    document.getElementById('stopBtn').classList.remove('hidden');
+    document.getElementById('timerBox').classList.remove('hidden');
+    refreshTimer();
+    if(sessionStarted) timerInterval=setInterval(refreshTimer,1000);
+  }catch(e){ clearActiveSession(); }
+}
+restoreActiveSession();
 function val(id){return document.getElementById(id).value.trim();}
 function saveEntry(){
   if(!val('book')){alert('Please enter the book or article.');return;}
@@ -217,9 +283,23 @@ function renderHistory(){
     <div class="entry">
       <strong>${escapeHtml(e.book)}</strong> <span class="small">${escapeHtml(e.date)} · ${escapeHtml(e.startTime)}</span>
       <div class="small">${escapeHtml(e.pages||'')}</div>
-      <p><b>Main idea:</b> ${escapeHtml(e.mainIdea||'—')}</p>
-      <p><b>3 things I remember:</b> ${escapeHtml(e.remember||'—')}</p>
-      <p><b>Action:</b> ${escapeHtml(e.actionStep||e.action||'—')}</p>
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;font-weight:700;color:#2563eb;padding:8px 0">View full notes</summary>
+        <p><b>What I wanted to learn:</b><br>${escapeHtml(e.learn||'—')}</p>
+        <p><b>What I already knew:</b><br>${escapeHtml(e.know||'—')}</p>
+        <p><b>Main idea:</b><br>${escapeHtml(e.mainIdea||'—')}</p>
+        <p><b>WHO? Who / what is involved?</b><br>${escapeHtml(e.who||'—')}</p>
+        <p><b>WHAT? What is happening?</b><br>${escapeHtml(e.what||'—')}</p>
+        <p><b>WHY? Why is it important?</b><br>${escapeHtml(e.why||'—')}</p>
+        <p><b>HOW? How does it work / how can I use it?</b><br>${escapeHtml(e.how||'—')}</p>
+        <p><b>What surprised or interested me?</b><br>${escapeHtml(e.interesting||'—')}</p>
+        <p><b>3 things I remember:</b><br>${escapeHtml(e.remember||'—')}</p>
+        <p><b>1-sentence summary:</b><br>${escapeHtml(e.summary||'—')}</p>
+        <p><b>What will I do with what I learned?</b><br>${escapeHtml(e.action||'—')}</p>
+        <p><b>My action step:</b><br>${escapeHtml(e.actionStep||'—')}</p>
+        <p><b>When will I do it?</b><br>${escapeHtml(e.when||'—')}</p>
+        <p><b>How will I know I did it?</b><br>${escapeHtml(e.success||'—')}</p>
+      </details>
       <button class="secondary" onclick="deleteEntry(${i})">Delete</button>
     </div>`).join('');
 }
@@ -236,6 +316,28 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 }
 renderHistory();
+const dailyWords = [
+  {w:"curious", m:"Wanting to know or learn something.", e:"She was curious about how the machine worked.", s:"c-u-r-i-o-u-s"},
+  {w:"precise", m:"Exact, accurate, and careful about details.", e:"Please give me the precise time of the meeting.", s:"p-r-e-c-i-s-e"},
+  {w:"adapt", m:"To change so you can deal with a new situation.", e:"We need to adapt to new technology.", s:"a-d-a-p-t"},
+  {w:"concise", m:"Short and clear, without unnecessary words.", e:"His explanation was concise and easy to understand.", s:"c-o-n-c-i-s-e"},
+  {w:"insight", m:"A clear and useful understanding of something.", e:"The book gave me an insight into better habits.", s:"i-n-s-i-g-h-t"},
+  {w:"resilient", m:"Able to recover and continue after difficulty.", e:"Regular practice can help us become more resilient.", s:"r-e-s-i-l-i-e-n-t"},
+  {w:"deliberate", m:"Done intentionally and with careful thought.", e:"She made a deliberate effort to speak slowly.", s:"d-e-l-i-b-e-r-a-t-e"},
+  {w:"consistency", m:"The quality of doing something regularly and reliably.", e:"Consistency is more important than doing everything perfectly.", s:"c-o-n-s-i-s-t-e-n-c-y"},
+  {w:"practical", m:"Useful and suitable for real situations.", e:"He prefers practical ideas that he can use immediately.", s:"p-r-a-c-t-i-c-a-l"},
+  {w:"reflect", m:"To think carefully about something that happened or was learned.", e:"Take a few minutes to reflect on what you read.", s:"r-e-f-l-e-c-t"},
+  {w:"retain", m:"To keep information in your memory.", e:"Recalling information helps you retain it longer.", s:"r-e-t-a-i-n"},
+  {w:"clarify", m:"To make something easier to understand.", e:"Can you clarify the main point?", s:"c-l-a-r-i-f-y"}
+];
+function renderVocabulary(){
+  const box=document.getElementById('vocabulary'); if(!box) return;
+  const d=new Date(); const start=(d.getFullYear()*366+d.getMonth()*31+d.getDate())*3;
+  const words=[]; for(let i=0;i<3;i++) words.push(dailyWords[(start+i)%dailyWords.length]);
+  box.innerHTML=words.map((x,i)=>`<div class="word-card"><div class="word">${i+1}. ${x.w}</div><div class="meaning">${x.m}</div><div class="example"><b>Example:</b> ${x.e}</div><div class="spelling"><b>Spelling:</b> ${x.s}</div></div>`).join('');
+}
+renderVocabulary();
+
 </script>
 </body>
 </html>
